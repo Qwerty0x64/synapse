@@ -14,6 +14,7 @@
 import hashlib
 import hmac
 import logging
+import secrets
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -375,7 +376,7 @@ class UserRegisterServlet(RestServlet):
         """
         self._clear_old_nonces()
 
-        nonce = self.hs.get_secrets().token_hex(64)
+        nonce = secrets.token_hex(64)
         self.nonces[nonce] = int(self.reactor.seconds())
         return 200, {"nonce": nonce}
 
@@ -477,13 +478,12 @@ class UserRegisterServlet(RestServlet):
 
 class WhoisRestServlet(RestServlet):
     path_regex = "/whois/(?P<user_id>[^/]*)$"
-    PATTERNS = (
-        admin_patterns(path_regex)
-        +
+    PATTERNS = [
+        *admin_patterns(path_regex),
         # URL for spec reason
         # https://matrix.org/docs/spec/client_server/r0.6.1#get-matrix-client-r0-admin-whois-userid
-        client_patterns("/admin" + path_regex, v1=True)
-    )
+        *client_patterns("/admin" + path_regex, v1=True),
+    ]
 
     def __init__(self, hs: "HomeServer"):
         self.hs = hs
@@ -552,11 +552,7 @@ class DeactivateAccountRestServlet(RestServlet):
 class AccountValidityRenewServlet(RestServlet):
     PATTERNS = admin_patterns("/account_validity/validity$")
 
-    def __init__(self, hs):
-        """
-        Args:
-            hs (synapse.server.HomeServer): server
-        """
+    def __init__(self, hs: "HomeServer"):
         self.hs = hs
         self.account_activity_handler = hs.get_account_validity_handler()
         self.auth = hs.get_auth()
